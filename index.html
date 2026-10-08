@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<!--
+GitHub Pages 전용 Index — 파일 이름은 index.html(소문자)로 올리세요.
+1. Code.gs를 구글에 넣고 GitHub 기본주소를 설정합니다.
+2. 웹 앱을 실행 사용자 '나', 액세스 '모든 사용자'로 새 버전 배포합니다.
+3. 아래 GOOGLE_SCRIPT_URL의 한글 안내를 배포 주소(/exec)로 바꿉니다.
+4. 이 파일을 GitHub Pages에 올립니다. API 키는 구글 Code.gs에만 둡니다.
+보라색 디자인, 기록·사진·수정·삭제·순위·관리자 기능은 유지됩니다.
+구글 서버의 작은 숨김 화면을 통해 연결하므로 별도의 Google Index 파일은 필요 없습니다.
+-->
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content"><title>대현고 스마트 독서 기록장</title><style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --secondary: #0ea5e9;
+      --accent: #f59e0b;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 80px; }
+
+    .header {
+      background: linear-gradient(135deg, #1e3a8a, #2563eb);
+      color: white;
+      padding: 24px 20px 20px;
+      text-align: center;
+      border-radius: 0 0 24px 24px;
+      box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.25);
+    }
+    .header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
+    .header p { font-size: 0.85rem; opacity: 0.85; margin-top: 4px; }
+
+    .container { max-width: 480px; margin: 20px auto; padding: 0 16px; }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border);
+    }
+    .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #334155; margin-bottom: 6px; }
+    .input-field {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .input-field:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+
+    /* 도서 검색 입력 그룹 */
+    .input-search-group { display: flex; gap: 8px; }
+    .btn-search-icon {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 0 16px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .auto-badge {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 4px 10px;
+      background-color: #eff6ff;
+      color: var(--primary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid #bfdbfe;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-primary { background-color: var(--primary); color: white; }
+    .btn-outline { background-color: transparent; border: 1.5px solid var(--border); color: #475569; }
+
+    .photo-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .photo-btn {
+      padding: 14px 10px;
+      border: 1.5px dashed #cbd5e1;
+      border-radius: 12px;
+      background: #f8fafc;
+      cursor: pointer;
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #475569;
+    }
+    .photo-btn:hover { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
+    .photo-btn span { display: block; font-size: 1.4rem; margin-bottom: 4px; }
+
+    .preview-container { margin-top: 12px; text-align: center; position: relative; display: none; }
+    .preview-img { max-width: 100%; max-height: 220px; border-radius: 12px; border: 1px solid var(--border); object-fit: cover; }
+    .remove-img-btn {
+      position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.6); color: white;
+      border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer;
+    }
+
+    .share-option-box {
+      background: #fffbeb;
+      border: 1px solid #fef3c7;
+      padding: 12px 14px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+    .share-option-box input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+    .share-option-text { font-size: 0.85rem; font-weight: 600; color: #92400e; }
+    .share-option-badge { background: var(--accent); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; }
+
+    .user-info-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #ffffff; padding: 14px 18px; border-radius: var(--radius);
+      border: 1px solid var(--border); margin-bottom: 16px;
+    }
+    .user-name { font-weight: 700; font-size: 1rem; }
+    .user-class-info { font-size: 0.8rem; color: var(--text-muted); }
+    .point-badge { background: #dbeafe; color: #1e40af; font-weight: 700; font-size: 0.85rem; padding: 4px 10px; border-radius: 20px; }
+    .auth-badge { font-size: 0.75rem; color: var(--text-muted); text-align: right; margin-top: 2px; }
+
+    /* 모달 스타일 (도서 검색 창) */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 999; padding: 16px;
+    }
+    .modal-content {
+      background: white; border-radius: 20px; width: 100%; max-width: 440px;
+      max-height: 80vh; display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    }
+    .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h3 { font-size: 1.1rem; font-weight: 700; }
+    .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-muted); }
+    .modal-body { padding: 16px; overflow-y: auto; flex: 1; }
+
+    /* 도서 검색 리스트 항목 */
+    .book-item {
+      display: flex; gap: 12px; padding: 12px; border-radius: 12px; border: 1px solid var(--border);
+      margin-bottom: 10px; cursor: pointer; transition: background 0.2s;
+    }
+    .book-item:hover { background: #f1f5f9; border-color: var(--primary); }
+    .book-thumb { width: 50px; height: 70px; object-fit: cover; border-radius: 6px; background: #e2e8f0; }
+    .book-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .book-item-title { font-size: 0.9rem; font-weight: 700; color: var(--text); line-height: 1.3; }
+    .book-item-author { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+    .book-item-publisher { font-size: 0.75rem; color: #94a3b8; }
+
+    .feed-card { margin-bottom: 16px; padding: 0; overflow: hidden; }
+    .feed-header { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; }
+    .feed-author { font-weight: 700; font-size: 0.9rem; }
+    .feed-date { font-size: 0.75rem; color: var(--text-muted); }
+    .feed-img { width: 100%; max-height: 280px; object-fit: cover; display: block; }
+    .feed-content { padding: 16px; }
+    .feed-book { font-weight: 700; font-size: 1rem; color: #1e293b; margin-bottom: 4px; }
+    .feed-review { font-size: 0.9rem; color: #334155; line-height: 1.5; white-space: pre-line; margin-top: 8px; }
+
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #ffffff; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-around; padding: 10px 0;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.05); z-index: 100;
+    }
+    .nav-item { border: none; background: none; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .nav-item.active { color: var(--primary); }
+    .nav-item span { font-size: 1.2rem; }
+
+    #toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
+      background: #1e293b; color: white; padding: 12px 20px; border-radius: 30px;
+      font-size: 0.88rem; font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1000;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    .hidden { display: none !important; }
+  
+body{font-family:system-ui,"맑은 고딕",sans-serif}.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.small{font-size:.83rem;color:#64748b;line-height:1.6}.gap{margin-top:12px}.review{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65}.cover{width:64px;height:90px;object-fit:contain}.photo{max-width:100%;max-height:320px;object-fit:contain;border-radius:10px;margin-top:8px}.entry{border-top:1px solid var(--border);padding:14px 0}.link{background:none;border:0;color:#2563eb;font-weight:700;cursor:pointer;text-align:left;padding:4px 0}.badge{background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:6px 10px}.rankrow{display:flex;align-items:center;gap:12px;border-top:1px solid #e2e8f0;padding:14px 0}.rankrow .link{flex:1}.mine{background:#eff6ff}button{cursor:pointer}button:disabled{opacity:.5;cursor:wait}textarea{min-height:140px;resize:vertical}.checks{display:block;line-height:1.7;margin:12px 0}.checks input{margin-right:6px}.modal-content{max-height:85vh;overflow:auto}.bottom-nav{max-width:520px;margin:auto}.nav-item{min-width:0}.nav-item span{font-size:1.1rem}.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse}td,th{padding:8px;text-align:left;border-bottom:1px solid #e2e8f0}.empty{padding:20px;text-align:center;color:#64748b}.admin-buttons{display:flex;flex-wrap:wrap;gap:8px}.admin-buttons button{padding:8px;border:1px solid #cbd5e1;border-radius:8px;background:white}.hidden{display:none!important}
+.title-refresh{color:inherit;background:none;border:0;font:inherit;cursor:pointer}.row .btn-search-icon{min-height:46px;align-self:stretch;white-space:nowrap;flex:0 0 auto;padding:0 16px}.stars{display:inline-block;position:relative;font-size:1.25rem;line-height:1;color:#cbd5e1;letter-spacing:2px;white-space:nowrap}.stars-fill{position:absolute;left:0;top:0;overflow:hidden;color:#f59e0b;white-space:nowrap}.rating-row{display:flex;align-items:center;gap:10px;margin:10px 0}.rating-range{width:100%;accent-color:#f59e0b}.entry-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.rating-value{font-size:.82rem;color:#64748b;white-space:nowrap}
+.star-picker{display:flex;gap:6px;margin:12px 0;touch-action:manipulation}.pick-star{position:relative;width:44px;height:48px;border:0;background:none;padding:0;cursor:pointer;color:#cbd5e1;font-size:42px;line-height:1}.pick-star .paint{position:absolute;left:0;top:0;overflow:hidden;color:#f59e0b;pointer-events:none;height:100%;white-space:nowrap}.pick-star:focus-visible{outline:2px solid #2563eb;border-radius:8px}.required-label{font-size:.75rem;color:#2563eb}.amount-prefix{color:#94a3b8;font-size:.85rem;margin-right:6px}.book-summary{display:flex;gap:12px;align-items:center}.book-details{min-width:0;overflow-wrap:anywhere;line-height:1.7}.book-fallback{width:40px;height:46px;flex-shrink:0;color:#2563eb}.photo-load{padding:14px 0;color:#94a3b8;font-size:.83rem}
+#loginPin,#regPin,#gatePin,#newPin{background:transparent;letter-spacing:.3em;min-height:46px;color:#0f172a;caret-color:#2563eb}
+
+/* 보라색 독서함 디자인 — 화면만 변경, 서버 기능 유지 */
+:root{--primary:#5543e8;--primary-hover:#4531d0;--secondary:#8575f1;--accent:#f4c958;--bg:#f8f9fd;--text:#242637;--text-muted:#7d8595;--border:#e9eaf2;--radius:24px}
+*{font-family:system-ui,-apple-system,"맑은 고딕",sans-serif}body{background:var(--bg);padding-bottom:104px;line-height:1.5}
+.header{background:linear-gradient(110deg,#5846e9,#4939d4);padding:18px 20px;border-radius:0;box-shadow:0 3px 14px #4234ad1a;text-align:left}
+.header-inner{max-width:500px;margin:auto;display:flex;align-items:center;gap:12px}.brand-icon{width:44px;height:48px;display:grid;place-items:center;font-size:25px;background:#ffffff24;border-radius:14px;flex-shrink:0}.brand-copy{flex:1;min-width:0}.header h1{font-size:1.06rem;line-height:1.4;letter-spacing:-.5px}.header p{font-size:.75rem;color:#e1dcff;opacity:1;margin-top:2px}.title-refresh{text-align:left}
+.header-logout{border:0;background:#ffffff15;color:#fff;width:40px;height:40px;border-radius:12px;font-size:22px;display:grid;place-items:center;flex-shrink:0}.header-logout:hover{background:#ffffff2b}
+.container{max-width:520px;margin:26px auto;padding:0 18px}.card{padding:24px;border:1px solid #ededf4;border-radius:26px;box-shadow:0 5px 16px #26234305;margin-bottom:20px}.card-title{font-size:1.12rem;color:#353044;letter-spacing:-.3px;margin-bottom:20px}
+.input-field{min-height:50px;border:1px solid #dde0eb;border-radius:15px;background:#fcfcff;font-size:1rem;padding:12px 15px;color:#292a3a;min-width:0}.input-field:focus{border-color:#8b7ded;box-shadow:0 0 0 3px #5543e812}.input-field::placeholder{color:#9ba2af;font-size:.92rem;letter-spacing:0}.form-group{margin-bottom:21px}.form-group label{font-size:.88rem;color:#606879;font-weight:650;margin-bottom:8px}select.input-field{background:#f8f9fd;cursor:pointer}textarea.input-field{min-height:155px;line-height:1.75}#loginPin,#regPin,#gatePin,#newPin{background:transparent;letter-spacing:.25em;min-height:50px}.row{gap:12px}.row>*{min-width:0}.row .btn-search-icon{min-height:50px}
+.btn{min-height:50px;border-radius:15px;font-size:.96rem;padding:13px 16px;transition:background .15s,transform .15s}.btn-primary,.btn-search-icon{background:var(--primary);color:#fff;box-shadow:0 6px 14px #5543e824}.btn-primary:hover,.btn-search-icon:hover{background:var(--primary-hover)}.btn-outline{background:#f1effe;color:#5946c9;border:1px solid #e1dcfa;box-shadow:none}.btn-outline:hover{background:#eae5fd}.btn-search-icon{border-radius:13px}.btn:active{transform:translateY(1px)}.link{color:#6553cb}.small{color:#828a99;line-height:1.7}.checks{padding:11px 13px;background:#f8f7fd;border:1px solid #eeeaf9;border-radius:13px;font-size:.87rem;margin:12px 0;color:#625d77}.checks input{accent-color:var(--primary);width:17px;height:17px;vertical-align:middle;margin-right:7px}.required-label{color:#7868d7;background:#f2efff;border-radius:6px;padding:2px 6px;margin-left:3px;font-size:.7rem}.gap{margin-top:14px}
+.auth-welcome{text-align:center;margin:8px 0 24px}.welcome-icon{display:grid;place-items:center;width:70px;height:70px;margin:0 auto 14px;background:#eeebfd;border-radius:22px;font-size:34px;box-shadow:inset 0 2px 5px #5543e808}.auth-welcome h2{font-size:1.48rem;color:#2a293b;letter-spacing:-.6px}.auth-welcome p{font-size:.86rem;color:#969dab;margin-top:6px}.auth-tabs{display:flex;gap:6px;border-radius:17px;background:#ebeef5;padding:6px;margin-bottom:18px}.auth-tab{flex:1;border:0;background:none;border-radius:12px;color:#818998;min-height:46px;font-size:.94rem;font-weight:700}.auth-tab.active{background:white;color:#5f4ac7;box-shadow:0 3px 9px #3b325511}.auth-card .card-title{font-size:1rem;color:#625782}.auth-card .btn-primary{margin-top:22px;min-height:54px}#authSection{padding-top:2px}
+.user-info-bar{display:block;position:relative;overflow:hidden;background:linear-gradient(125deg,#5847e9,#3f329f);border:0;border-radius:26px;box-shadow:0 8px 20px #4d3fb923;padding:23px;color:#fff;margin-bottom:25px}.user-info-bar:after{content:"";position:absolute;width:130px;height:140px;right:-25px;bottom:-45px;background:#ffffff08;border-radius:35px;transform:rotate(-18deg);pointer-events:none}.hero-pill{display:inline-block;background:#ffffff15;padding:4px 12px;border-radius:20px;font-size:.76rem;color:#e5dfff;margin-bottom:9px}.user-name{color:#fff;font-size:1.35rem;letter-spacing:-.3px;font-weight:750}.user-class-info{color:#d2cafa;font-size:.73rem;margin-top:5px}.hero-stats{display:grid;grid-template-columns:1fr 1fr;background:#ffffff13;border:1px solid #ffffff15;border-radius:17px;margin-top:18px;padding:15px 12px;text-align:center;position:relative;z-index:1}.hero-stat+.hero-stat{border-left:1px solid #ffffff2a}.hero-stat-label{font-size:.77rem;color:#d8d1fa}.point-badge{color:#ffe07a;background:none;box-shadow:none;padding:0;font-size:1.65rem;margin-top:4px}.auth-badge{color:#9de3ce;font-size:1.1rem;margin-top:7px;font-weight:750}
+.bottom-nav{left:0;right:0;bottom:12px;max-width:486px;width:calc(100% - 24px);border:1px solid #eeedf8;background:#fff;border-radius:22px;padding:7px 5px;box-shadow:0 5px 22px #332a7112;z-index:100}.nav-item{min-height:56px;border-radius:15px;font-size:.73rem;color:#9995aa;gap:3px;padding:7px 3px}.nav-item span{font-size:1.15rem}.nav-item.active{background:#f0edff;color:#5e47d8}
+.modal-overlay{background:#28204066;backdrop-filter:blur(3px)}.modal-content{border-radius:25px;box-shadow:0 20px 60px #2b1f6030;max-width:480px;width:calc(100% - 24px)}.modal-header{padding:20px 22px;border-color:#eeeaf7}.modal-header h3{color:#4d416e;font-size:1.08rem}.modal-close{background:#f3f0fc;color:#716580;border-radius:50%;width:32px;height:32px}.modal-body{padding:20px 22px}.book-summary{gap:15px}.book-details strong{font-size:1.02rem;color:#353044}.cover{border-radius:7px;box-shadow:0 3px 8px #3026520d}.rankrow{border-color:#f0edf6;border-radius:9px;padding:15px 9px}.rankrow strong{color:#7d6cc9;font-size:.94rem}.rankrow.mine{background:#f3f0ff}.entry{border-color:#f0edf6;padding:17px 0}.review{font-size:.93rem;color:#515362;line-height:1.8}.entry-head{margin-bottom:8px}.photo{border-radius:15px}.admin-buttons button{color:#6d588f;border:1px solid #e3dcef;background:#faf8ff;border-radius:10px}.star-picker{gap:7px}.pick-star{font-size:42px}#toast{background:#3e345a;border-radius:16px;max-width:90%;text-align:center;line-height:1.6}.account-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}.account-header .card-title{margin:0}.logout-small{background:#f5f2fb;color:#8c819c;border:1px solid #e8e1f1;border-radius:11px;font-size:.8rem;padding:7px 11px;white-space:nowrap}
+@media(max-width:360px){.container{padding:0 12px}.card{padding:19px}.header{padding:15px 12px}.header h1{font-size:.95rem}.brand-icon{width:36px;height:42px}.row{gap:8px}.btn{padding:12px 10px;font-size:.88rem}.user-name{font-size:1.25rem}}
+
+/* 휴대폰 자판: 페이지와 팝업의 실제 보이는 높이에 맞춰 스크롤 */
+:root{--visible-height:100dvh;--visible-top:0px;--keyboard-room:0px}
+html{height:auto;min-height:100%;overflow-y:auto;scroll-padding-top:16px;scroll-padding-bottom:100px}
+body{height:auto;min-height:100svh;overflow-y:visible;padding-bottom:calc(104px + env(safe-area-inset-bottom,0px) + var(--keyboard-room));}
+input,textarea{scroll-margin-top:24px;scroll-margin-bottom:90px}
+.modal-overlay{inset:auto 0 auto 0;top:var(--visible-top);height:var(--visible-height);max-height:var(--visible-height);align-items:flex-start;padding:12px 0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal-content{display:flex;flex-direction:column;flex-shrink:0;max-height:calc(var(--visible-height) - 24px);overflow:hidden;margin:auto}
+.modal-header{flex-shrink:0}.modal-body{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.keyboard-open .bottom-nav{display:none!important}
+.keyboard-open .modal-content{margin:0 auto}
+@supports not (height:100dvh){:root{--visible-height:100vh}}
+</style></head><body>
+<div id="toast"><span id="toastMsg"></span></div>
+<div class="header"><div class="header-inner"><span class="brand-icon" aria-hidden="true">📖</span><div class="brand-copy"><h1><button class="title-refresh" onclick="refreshApp(this)">대현고 스마트 독서 기록장</button></h1><p>책 읽는 대현인, 꿈을 넓히는 독서 활동</p></div><button id="headerLogout" class="header-logout hidden" onclick="logout()" title="로그아웃" aria-label="로그아웃">↪</button></div></div>
+<div class="container">
+<div id="authSection"><div class="auth-welcome"><div class="welcome-icon" aria-hidden="true">🎓</div><h2>나의 독서 이야기를 시작해요</h2><p>하루의 독서가 쌓여, 나만의 독서함으로</p></div><div class="auth-tabs"><button id="authLoginTab" class="auth-tab active" onclick="authMode(false)">🔑 로그인</button><button id="authRegisterTab" class="auth-tab" onclick="authMode(true)">🌱 회원가입</button></div>
+ <div id="loginCard" class="card auth-card"><div class="card-title">🔑 로그인</div>
+ <div class="form-group"><label for="loginStudentId">학번 (5자리)</label><input id="loginStudentId" class="input-field" inputmode="numeric" maxlength="5" placeholder="예: 10203" autocomplete="username"></div>
+ <div class="form-group"><label for="loginPin">PIN (숫자 4자리)</label><input id="loginPin" class="input-field" type="password" inputmode="numeric" maxlength="4" placeholder="PIN 입력" autocomplete="current-password"></div>
+ <button id="loginButton" class="btn btn-primary gap" onclick="login(this)">로그인하기</button></div>
+ <div id="registerCard" class="card auth-card hidden"><div class="card-title">📝 신규 회원가입</div>
+ <div class="form-group"><label for="regId">학번 (5자리)</label><input id="regId" class="input-field" inputmode="numeric" maxlength="5" placeholder="예: 10203"></div>
+ <div class="form-group"><label for="regName">이름</label><input id="regName" class="input-field" maxlength="30" placeholder="이름 입력"></div>
+ <div class="form-group"><label for="regPin">PIN (숫자 4자리)</label><input id="regPin" class="input-field" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password" placeholder="예: 0123"></div>
+ <p class="small">공개 나눔과 순위에서는 자동 발급된 닉네임이 표시됩니다.</p>
+ <button id="registerButton" class="btn btn-primary gap" onclick="register(this)">가입 완료</button></div>
+</div>
+<div id="pinGate" class="card hidden"><div class="card-title">🔐 4자리 PIN 설정</div><input id="gatePin" class="input-field" type="password" inputmode="numeric" maxlength="4" placeholder="새 PIN 숫자 4자리"><button class="btn btn-primary gap" onclick="setPin('gatePin',this)">PIN 설정하고 시작하기</button><button class="btn btn-outline gap" onclick="logout()">로그아웃</button></div>
+<div id="mainSection" class="hidden">
+<div class="user-info-bar"><div class="hero-pill">오늘도 즐거운 독서 시간 📖</div><div class="user-name" id="userName"></div><div class="user-class-info" id="userInfo"></div><div class="hero-stats"><div class="hero-stat"><div class="hero-stat-label">나의 독서 점수</div><div class="point-badge" id="userPoints"></div></div><div class="hero-stat"><div class="hero-stat-label">쌓아온 독서 기록</div><div class="auth-badge" id="userCount"></div></div></div></div>
+<div id="tabWrite" class="tab-content">
+ <div class="card"><div class="card-title">📚 독서 활동 인증하기</div>
+ <div class="form-group"><label for="myBooks">내가 읽던 책</label><select id="myBooks" class="input-field" onchange="selectMyBook()"><option value="">읽던 책을 선택하세요</option></select><button class="btn btn-outline gap" onclick="openNewBook()">새로운 책 추가하기</button></div>
+ <div id="chosenBook" class="gap small">읽던 책을 선택하거나 새 도서를 검색하세요.</div>
+ <div class="form-group gap"><label>오늘의 독서량 (둘 중 하나 이상)</label><div class="row"><div><label for="readPages" class="small">읽은 쪽수</label><input id="readPages" class="input-field" type="number" min="1" max="10000" step="1" placeholder="예: 20쪽"></div><div><label for="readMinutes" class="small">독서 시간 (분)</label><input id="readMinutes" class="input-field" type="number" min="1" max="1440" step="1" placeholder="예: 15분"></div></div></div>
+ <div class="form-group gap"><label for="review">오늘의 독서 소감</label><textarea id="review" class="input-field" maxlength="5000" placeholder="오늘 읽은 내용과 자신의 생각을 기록하세요."></textarea></div>
+ <div class="form-group"><label>오늘 읽은 내용의 별점 <span class="required-label">필수</span></label><div id="ratingPicker" class="star-picker" role="group" aria-label="별점 선택"></div><input id="rating" type="hidden" value="0"><div id="ratingValue" class="small">별을 눌러 선택하세요 (0.5~5점)</div></div>
+ <div class="row"><button class="btn btn-outline" onclick="document.getElementById('camera').click()">📷 카메라</button><button class="btn btn-outline" onclick="document.getElementById('album').click()">🖼️ 앨범</button></div>
+ <input id="camera" type="file" accept="image/*" capture="environment" class="hidden" onchange="choosePhoto(this)"><input id="album" type="file" accept="image/*" class="hidden" onchange="choosePhoto(this)">
+ <div id="photoPreview" class="hidden"><img id="preview" class="photo" alt="첨부사진 미리보기"><button class="link" onclick="removePhoto()">사진 지우기</button></div>
+ <label class="checks"><input id="share" type="checkbox" checked onchange="syncPhotoPublic()">책별 나눔에 소감 공유하기</label>
+ <label class="checks"><input id="photoPublic" type="checkbox" disabled>첨부사진도 공개하기 (+0.5점)</label>
+ <p class="small">등록 1점 · 직접 첨부한 사진 +0.5점 · 사진 공개 +0.5점<br>검색된 책 표지는 사진 점수에 포함되지 않습니다. 사진 공개 시 로그인한 학생들이 앱 안에서 볼 수 있습니다. 얼굴·학번 등 개인정보가 담긴 사진은 피해주세요.</p>
+ <button id="submitBtn" class="btn btn-primary gap" onclick="submitRecord(this)">인증 제출하기</button></div>
+</div>
+<div id="tabFeed" class="tab-content hidden"><div class="card-title">🖼️ 책별 독서 나눔</div><div id="profileBanner" class="small"></div><button id="allFeed" class="link hidden" onclick="loadFeed('')">전체 책별 나눔 보기</button><div id="feedList"></div></div>
+<div id="tabRank" class="tab-content hidden"><div class="card"><div class="card-title">🏆 독서 순위</div><div class="row"><select id="rankPeriod" class="input-field"><option value="month">이번 달</option><option value="total">누적</option></select><select id="rankScope" class="input-field"><option value="grade">우리 학년</option><option value="all">학교 전체</option></select><button class="btn-search-icon" onclick="run(this,()=>loadRank(true))">조회</button></div><div id="myRank" class="small gap"></div><p class="small">동점은 공동 순위입니다. 닉네임을 누르면 공개 독서 기록을 볼 수 있어요.</p><div id="rankList"></div></div></div>
+<div id="tabMy" class="tab-content hidden"><div class="card"><div class="account-header"><div class="card-title">👤 나의 독서 기록</div><button class="logout-small" onclick="logout()">로그아웃 ↪</button></div><div id="mySummary" class="small"></div><button id="adminEntry" class="btn btn-outline gap hidden" onclick="openAdmin(this)">관리자 모드 접속</button><div class="row gap"><input id="newPin" class="input-field" type="password" maxlength="4" inputmode="numeric" placeholder="새 PIN 숫자 4자리"><button class="btn-search-icon" onclick="setPin('newPin',this)">PIN 변경</button></div></div><div id="myRecords"></div></div>
+</div>
+<div id="adminSection" class="hidden"><div class="card"><div class="card-title">🛠️ 관리자</div><button class="btn btn-outline" onclick="closeAdmin()">마이페이지로 돌아가기</button><p class="small">로그인한 관리자 학번을 서버에서 확인합니다.</p><button class="btn btn-primary gap" onclick="loadAdmin(this)">관리 자료 불러오기 / 새로고침</button><div id="adminStats" class="gap"></div></div><div class="card"><label for="adminQuery">학번·이름·도서명 검색</label><input id="adminQuery" class="input-field gap" placeholder="검색어" oninput="renderAdmin()"><div class="card-title gap">회원 관리</div><div id="adminUsers"></div></div><div class="card"><div class="card-title">독서 기록 관리</div><div id="adminRecords"></div></div></div>
+</div>
+<div id="bookModal" class="modal-overlay hidden"><div class="modal-content"><div class="modal-header"><h3>🔍 YES24 도서 검색</h3><button class="modal-close" onclick="hide('bookModal',true)">✕</button></div><div style="padding:12px 16px"><div class="input-search-group"><input id="searchQuery" class="input-field" maxlength="100" placeholder="제목·저자·ISBN 검색" onkeydown="if(event.key==='Enter')searchBooks()"><button class="btn-search-icon" onclick="searchBooks()">검색</button></div><p class="small">도서 정보 제공: YES24</p></div><div id="bookResults" class="modal-body"></div></div></div>
+<div id="bottomNav" class="bottom-nav hidden"><button class="nav-item active" data-tab="Write" onclick="tab('Write')"><span>✏️</span>기록하기</button><button class="nav-item" data-tab="Feed" onclick="tab('Feed')"><span>🖼️</span>책별 나눔</button><button class="nav-item" data-tab="Rank" onclick="tab('Rank')"><span>🏆</span>순위</button><button class="nav-item" data-tab="My" onclick="tab('My')"><span>👤</span>마이페이지</button></div>
+<div id="editModal" class="modal-overlay hidden"><div class="modal-content"><div class="modal-header"><h3>독서 기록 수정</h3><button class="modal-close" onclick="hide('editModal',true)">✕</button></div><div class="modal-body"><p id="editTitle" class="small"></p><div class="row gap"><div><label for="editPages">읽은 쪽수</label><input id="editPages" class="input-field" type="number" min="1" max="10000" step="1" placeholder="읽은 쪽수"></div><div><label for="editMinutes">독서 시간 (분)</label><input id="editMinutes" class="input-field" type="number" min="1" max="1440" step="1" placeholder="독서 시간"></div></div><label for="editReview" class="gap" style="display:block">독서 소감</label><textarea id="editReview" class="input-field gap" maxlength="5000"></textarea><label class="gap" style="display:block">별점 (필수)</label><div id="editRatingPicker" class="star-picker" role="group" aria-label="수정 별점 선택"></div><input id="editRating" type="hidden" value="0"><p id="editRatingValue" class="small"></p><button class="btn btn-primary gap" onclick="saveMyEdit(this)">수정 저장하기</button></div></div></div>
+<script>
+// 여기 한 곳만 실제 구글 웹 앱 배포 주소로 바꾸세요.
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyM_4LNQLxRZVPtJa5U1mshKzzH7exsajlSY_5FOZcKGWeiPwDcql_DALo0IQDcRsDPZA/exec';
+let adminVisible=false;
+let token='',user=null,chosen=null,photo='',myBooks=[],adminData=null,requestId='',photoBusy=false,myRecords=[],editingId='';
+const viewCache=new Map();
+function cached(name,arg,force=false){const key=name+JSON.stringify(arg),c=viewCache.get(key);if(!force&&c&&Date.now()-c.time<30000)return Promise.resolve(c.data);return rpc(name,arg).then(data=>{viewCache.set(key,{time:Date.now(),data});return data;});}
+function starHTML(n){if(n===null||n===undefined)return '';return '<span class="stars" role="img" aria-label="별점 '+Number(n)+'점"><span>★★★★★</span><span class="stars-fill" style="width:'+Number(n)*20+'%">★★★★★</span></span><span class="rating-value"> '+Number(n)+'점</span>';}
+function paintPicker(target,input,label){
+  const rating=Number($(input).value);$(target).querySelectorAll('.pick-star').forEach((b,i)=>{b.querySelector('.paint').style.width=Math.max(0,Math.min(1,rating-i))*100+'%';b.setAttribute('aria-label',(i+1)+'번째 별: 왼쪽 0.5점, 오른쪽 1점');});
+  $(label).textContent=rating?rating+'점 / 5점':'별을 눌러 선택하세요 (0.5~5점)';
+}
+function initPicker(target,input,label){
+  $(target).innerHTML='';for(let i=0;i<5;i++){const b=document.createElement('button');b.type='button';b.className='pick-star';b.innerHTML='<span>★</span><span class="paint">★</span>';
+    b.onclick=e=>{const rect=b.getBoundingClientRect(),half=e.detail===0?1:(e.clientX-rect.left<rect.width/2?.5:1);$(input).value=String(i+half);paintPicker(target,input,label);};
+    b.onkeydown=e=>{if(e.key==='ArrowLeft'||e.key==='ArrowDown'||e.key==='ArrowRight'||e.key==='ArrowUp'){e.preventDefault();const delta=e.key==='ArrowLeft'||e.key==='ArrowDown'?-.5:.5;$(input).value=String(Math.max(.5,Math.min(5,Number($(input).value)+delta)));paintPicker(target,input,label);}};
+    $(target).append(b);
+  }paintPicker(target,input,label);
+}
+function showRating(){paintPicker('ratingPicker','rating','ratingValue');}
+function setupPins(){['loginPin','regPin','gatePin','newPin'].forEach(id=>{
+  const input=$(id);input.maxLength=4;input.addEventListener('input',()=>{input.value=input.value.replace(/\D/g,'').slice(0,4);});
+});}
+function syncPin(id){}
+function clearPin(id){$(id).value='';syncPin(id);}
+function amountText(r){const xs=[];if(r.pages)xs.push(r.pages+'쪽');if(r.minutes)xs.push(r.minutes+'분');return xs.length?'('+xs.join(', ')+')':'';}
+async function refreshApp(btn){run(btn,async()=>{
+  viewCache.clear();hide('bookModal',true);hide('editModal',true);
+  if(adminVisible){adminData=await rpc('adminDashboard',token);renderAdmin();return;}
+  if(!token){authMode(false);$('loginStudentId').value='';clearPin('loginPin');$('loginStudentId').focus();return;}
+  if(user&&user.needsPinChange){hide('pinGate',false);return;}
+  const r=await rpc('getMyPage',token);user=r.user;refreshUser();tab('Write');toast('새로 불러왔습니다.');
+});}
+function openNewBook(){hide('bookModal',false);$('bookResults').textContent='검색해서 새로운 책을 선택하세요.';$('searchQuery').focus();}
+const $=id=>document.getElementById(id), hide=(id,yes)=>$(id).classList.toggle('hidden',yes), val=id=>$(id).value.trim();
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function url(v){return /^https:\/\//.test(String(v||''))?esc(v):'';}
+function toast(s){$('toastMsg').textContent=s;$('toast').classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>$('toast').classList.remove('show'),4200);}
+// Google HTML 서비스의 연결 화면을 숨김 iframe으로 열고 postMessage로 통신합니다.
+// 새 도메인으로 fetch를 보내지 않으므로 CORS 우회용 공개 프록시가 필요 없습니다.
+let bridgePromise=null,bridgeWindow=null,bridgeOrigin='',bridgeChannel='',bridgeFrame=null,bridgeReady=null;
+const bridgeRequests=new Map();
+function trustedGoogleOrigin(origin){try{const u=new URL(origin);return u.protocol==='https:'&&(u.hostname==='script.google.com'||u.hostname==='script.googleusercontent.com'||u.hostname.endsWith('.googleusercontent.com'));}catch(e){return false;}}
+window.addEventListener('message',event=>{
+  const data=event.data;
+  if(!data||data.channel!==bridgeChannel||!trustedGoogleOrigin(event.origin))return;
+  if(data.type==='reading-ready'){
+    if(bridgeWindow&&event.source!==bridgeWindow)return;
+    bridgeWindow=event.source;bridgeOrigin=event.origin;if(bridgeReady){bridgeReady();bridgeReady=null;}return;
+  }
+  if(event.source!==bridgeWindow||event.origin!==bridgeOrigin||data.type!=='reading-result')return;
+  const pending=bridgeRequests.get(data.id);if(!pending)return;
+  clearTimeout(pending.timer);bridgeRequests.delete(data.id);
+  if(data.result&&data.result.success)pending.resolve(data.result);else pending.reject(Error(data.result&&data.result.message||'요청 처리 실패'));
+});
+function ensureBridge(){
+  if(bridgePromise)return bridgePromise;
+  let endpoint;try{endpoint=new URL(GOOGLE_SCRIPT_URL);if(endpoint.protocol!=='https:'||endpoint.hostname!=='script.google.com'||!endpoint.pathname.endsWith('/exec'))throw Error();}catch(e){return Promise.reject(Error('Index 맨 앞 GOOGLE_SCRIPT_URL에 구글 웹 앱 배포 주소(/exec)를 입력하세요.'));}
+  if(location.protocol!=='https:')return Promise.reject(Error('파일을 직접 여는 대신 GitHub Pages의 HTTPS 주소에서 접속하세요.'));
+  bridgeChannel=crypto.randomUUID();endpoint.searchParams.set('bridge','1');endpoint.searchParams.set('channel',bridgeChannel);
+  bridgePromise=new Promise((resolve,reject)=>{
+    const timeout=setTimeout(()=>{bridgeReady=null;reject(Error('구글 서버 연결 실패: 배포 접근 권한, /exec 주소, Code.gs의 GitHub 기본주소를 확인하세요.'));},30000);
+    bridgeReady=()=>{clearTimeout(timeout);resolve();};
+    bridgeFrame=document.createElement('iframe');bridgeFrame.title='독서 기록장 서버 연결';bridgeFrame.style.display='none';bridgeFrame.setAttribute('aria-hidden','true');bridgeFrame.src=endpoint.href;document.body.append(bridgeFrame);
+  }).catch(error=>{if(bridgeFrame)bridgeFrame.remove();bridgePromise=null;bridgeWindow=null;bridgeOrigin='';throw error;});
+  return bridgePromise;
+}
+async function rpc(name,arg){
+  await ensureBridge();
+  return new Promise((resolve,reject)=>{
+    const id=crypto.randomUUID(),timer=setTimeout(()=>{bridgeRequests.delete(id);reject(Error('서버 응답이 지연됩니다. 저장 요청은 다시 누르면 중복 저장을 확인합니다.'));},120000);
+    bridgeRequests.set(id,{resolve,reject,timer});
+    try{bridgeWindow.postMessage({channel:bridgeChannel,type:'reading-request',id,action:name,arg},bridgeOrigin);}
+    catch(e){clearTimeout(timer);bridgeRequests.delete(id);reject(Error('구글 서버와 연결이 끊겼습니다. 페이지를 새로 열어주세요.'));}
+  });
+}
+async function run(btn,fn){if(btn)btn.disabled=true;try{await fn();}catch(e){toast(e.message);}finally{if(btn)btn.disabled=false;}}
+function authMode(register){hide('loginCard',register);hide('registerCard',!register);$('authLoginTab').classList.toggle('active',!register);$('authRegisterTab').classList.toggle('active',register);}
+function applySession(r){token=r.token;user=r.user;sessionStorage.setItem('readingToken',token);hide('authSection',true);hide('headerLogout',false);hide('pinGate',!user.needsPinChange);hide('mainSection',user.needsPinChange);hide('bottomNav',user.needsPinChange);if(!user.needsPinChange){refreshUser();tab('Write');}}
+function refreshUser(){$('userName').textContent=user.name+' 학생의 독서함';$('userInfo').textContent=user.grade+'학년 '+user.classNum+'반 '+user.number+'번 · '+user.nickname;$('userPoints').textContent=user.points+'점';$('userCount').textContent='인증 '+user.authCount+'회';}
+function login(btn){run(btn,async()=>{const r=await rpc('loginUser',{studentId:val('loginStudentId'),pin:val('loginPin')});clearPin('loginPin');applySession(r);toast(r.message);});}
+function register(btn){run(btn,async()=>{if(!/^\d{4}$/.test(val('regPin')))throw Error('PIN은 숫자 4자리입니다.');const r=await rpc('registerUser',{studentId:val('regId'),name:val('regName'),pin:val('regPin')});$('loginStudentId').value=val('regId');clearPin('regPin');authMode(false);toast(r.message);});}
+function setPin(id,btn){run(btn,async()=>{if(!/^\d{4}$/.test(val(id)))throw Error('PIN은 숫자 4자리입니다.');const r=await rpc('changePin',{token,pin:val(id)});clearPin(id);applySession(r);toast(r.message);});}
+async function logout(){const old=token;token='';user=null;chosen=null;photo='';requestId='';sessionStorage.removeItem('readingToken');viewCache.clear();adminVisible=false;adminData=null;hide('adminSection',true);hide('mainSection',true);hide('pinGate',true);hide('bottomNav',true);hide('authSection',false);hide('headerLogout',true);authMode(false);$('review').value='';$('chosenBook').textContent='읽던 책을 선택하거나 새 도서를 검색하세요.';removePhoto();try{if(old)await rpc('logoutUser',old);}catch(e){}toast('로그아웃되었습니다.');}
+function tab(name,publicId=''){['Write','Feed','Rank','My'].forEach(n=>hide('tab'+n,n!==name));document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));if(name==='Write')loadBooks();if(name==='Feed')loadFeed(publicId);if(name==='Rank')loadRank();if(name==='My')loadMy();}
+function bookHTML(b,cover=true){
+  const image=cover&&url(b.coverUrl)?'<img class="cover" src="'+url(b.coverUrl)+'" alt="책 표지" loading="lazy" onerror="this.hidden=true">':'';
+  return '<div class="book-summary">'+image+'<div class="book-details"><strong>'+esc(b.title)+'</strong><div class="small">'+esc(b.author)+' · '+esc(b.publisher||'')+'</div><div class="small">'+(b.isbn13?'ISBN '+esc(b.isbn13):'기존 도서 · ISBN 미등록')+'</div></div></div>';
+}
+async function loadBooks(){try{const r=await cached('getMyBooks',token);myBooks=r.items;$('myBooks').innerHTML='<option value="">읽던 책을 선택하세요</option>'+myBooks.map((b,i)=>'<option value="'+i+'">'+esc(b.title)+'</option>').join('');}catch(e){toast(e.message);}}
+function selectMyBook(){const i=$('myBooks').value;if(i!=='')selectBook(myBooks[Number(i)]);}
+function selectBook(b){chosen=b;$('myBooks').value=String(myBooks.findIndex(x=>x.key===b.key));$('chosenBook').innerHTML=bookHTML(b);hide('bookModal',true);}
+async function searchBooks(){const q=val('searchQuery');if(!q)return toast('검색어를 입력하세요.');hide('bookModal',false);$('bookResults').textContent='검색 중...';try{const r=await rpc('searchBookAPI',{token,query:q});$('bookResults').innerHTML='';if(!r.items.length)$('bookResults').textContent='ISBN13이 등록된 도서 검색 결과가 없습니다.';r.items.forEach(b=>{const box=document.createElement('div');box.className='entry';box.innerHTML=bookHTML(b);const btn=document.createElement('button');btn.className='btn btn-outline gap';btn.textContent='이 책 선택하기';btn.onclick=()=>selectBook(b);box.append(btn);$('bookResults').append(box);});}catch(e){$('bookResults').textContent=e.message;}}
+function syncPhotoPublic(){$('photoPublic').disabled=!photo||!$('share').checked;if($('photoPublic').disabled)$('photoPublic').checked=false;}
+async function choosePhoto(input){const f=input.files[0];if(!f)return;if(photoBusy)return;photoBusy=true;try{if(f.size>20*1024*1024)throw Error('원본 사진은 20MB 이하로 선택하세요.');const raw=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(Error('사진을 읽을 수 없습니다.'));r.readAsDataURL(f);});const im=await new Promise((res,rej)=>{const x=new Image();x.onload=()=>res(x);x.onerror=()=>rej(Error('사진 형식을 지원하지 않습니다. JPG 또는 PNG로 선택하세요.'));x.src=raw;});const scale=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*scale);c.height=Math.round(im.height*scale);c.getContext('2d').drawImage(im,0,0,c.width,c.height);const next=c.toDataURL('image/jpeg',.82);if(next.length>4*1024*1024)throw Error('사진 용량이 너무 큽니다. 작은 사진을 선택하세요.');photo=next;$('preview').src=photo;hide('photoPreview',false);syncPhotoPublic();}catch(e){toast(e.message);}finally{photoBusy=false;input.value='';}}
+function removePhoto(){photo='';$('preview').removeAttribute('src');hide('photoPreview',true);syncPhotoPublic();}
+function submitRecord(btn){run(btn,async()=>{if(!chosen)throw Error('도서를 먼저 선택하세요.');if(Number($('rating').value)<.5)throw Error('별점을 먼저 선택하세요.');if(!val('review'))throw Error('독서 소감을 작성하세요.');if(!Number(val('readPages'))&&!Number(val('readMinutes')))throw Error('읽은 쪽수 또는 독서 시간(분)을 입력하세요.');if(photoBusy)throw Error('사진 처리 완료 후 제출하세요.');if(!requestId)requestId=crypto.randomUUID();const r=await rpc('saveReadingActivity',{token,bookKey:chosen.key,review:val('review'),photoBase64:photo,shareToFeed:$('share').checked,photoPublic:$('photoPublic').checked,requestId,pages:val('readPages'),minutes:val('readMinutes'),rating:Number($('rating').value)});user=r.user;refreshUser();$('review').value='';$('readPages').value='';$('readMinutes').value='';$('rating').value='0';showRating();$('share').checked=true;removePhoto();requestId='';viewCache.clear();toast(r.message);$('rankPeriod').value='month';$('rankScope').value='grade';tab('Rank');});}
+async function loadFeed(publicId){$('feedList').textContent='나눔을 불러오는 중...';hide('allFeed',!publicId);$('profileBanner').textContent=publicId?'선택한 닉네임의 공개 독서 기록':'';try{const r=await cached('getFeedList',{token,publicId});$('feedList').innerHTML='';if(!r.groups.length)$('feedList').innerHTML='<div class="card empty">공개된 독서 소감이 없습니다.</div>';r.groups.forEach(g=>{const card=document.createElement('div');card.className='card';card.innerHTML=bookHTML(g.book,false)+'<p class="small gap">공개 소감 '+g.entries.length+'개</p>';g.entries.forEach(e=>{const box=document.createElement('div');box.className='entry';const a=document.createElement('button');a.className='link';a.textContent=e.nickname+(e.publicId===user.publicId?' (나)':'');a.onclick=()=>loadFeed(e.publicId);const head=document.createElement('div');head.className='entry-head';const stars=document.createElement('span');stars.innerHTML=starHTML(e.rating);head.append(a,stars);box.append(head);const p=document.createElement('p');p.className='review';const prefix=document.createElement('span');prefix.className='amount-prefix';prefix.textContent=amountText(e)+(amountText(e)?' ':'');p.append(prefix,document.createTextNode(e.review));box.append(p);if(e.photoId){const holder=document.createElement('div');holder.className='photo-load';holder.textContent='인증사진';box.append(holder);queueSharedPhoto(holder,e.photoId);}card.append(box);});$('feedList').append(card);});}catch(e){$('feedList').textContent=e.message;}}
+async function loadRank(force=false){try{const r=await cached('getRanking',{token,period:$('rankPeriod').value,scope:$('rankScope').value},force);$('myRank').textContent='나의 점수 '+r.myPoints+'점 · 학년 '+r.gradeRank+'위 · 전체 '+r.wholeRank+'위';$('rankList').innerHTML='';r.items.forEach(x=>{const row=document.createElement('div');row.className='rankrow'+(x.mine?' mine':'');const rank=document.createElement('strong');rank.textContent=x.rank+'위';const nick=document.createElement('button');nick.className='link';nick.textContent=x.nickname+(x.mine?' (나)':'');nick.onclick=()=>tab('Feed',x.publicId);const pts=document.createElement('span');pts.textContent=x.points+'점';row.append(rank,nick,pts);$('rankList').append(row);});}catch(e){toast(e.message);}}
+async function loadMy(){try{
+  const r=await rpc('getMyPage',token);user=r.user;myRecords=r.records;refreshUser();hide('adminEntry',!user.isAdmin);$('mySummary').textContent='닉네임 '+user.nickname+' · 누적 '+user.totalPoints+'점 · 인증 '+user.authCount+'회';
+  $('myRecords').innerHTML='';if(!myRecords.length)$('myRecords').innerHTML='<div class="card empty">첫 독서 기록을 남겨보세요.</div>';
+  myRecords.forEach(x=>{const card=document.createElement('div');card.className='card';card.innerHTML='<strong>'+esc(x.title)+'</strong><p class="small">'+esc(x.date)+' · '+x.points+'점'+' · '+(x.shared?'소감 공개':'소감 비공개')+(x.photoPublic?' · 사진 공개':'')+'</p><p class="small">'+esc(amountText(x))+'</p><div>'+starHTML(x.rating)+'</div><p class="review gap">'+esc(x.review)+'</p>';const btn=document.createElement('button');btn.className='btn btn-outline gap';btn.textContent='수정';btn.onclick=()=>openMyEdit(x.id);const del=document.createElement('button');del.className='btn btn-outline gap';del.textContent='삭제';del.style.color='#dc2626';del.onclick=()=>deleteMyRecord(x.id,del);const actions=document.createElement('div');actions.className='row';actions.append(btn,del);card.append(actions);$('myRecords').append(card);});
+}catch(e){toast(e.message);}}
+function openMyEdit(id){const r=myRecords.find(x=>x.id===id);if(!r)return;editingId=id;$('editTitle').textContent=r.title;$('editReview').value=r.review;$('editPages').value=r.pages||'';$('editMinutes').value=r.minutes||'';$('editRating').value=String(r.rating||0);paintPicker('editRatingPicker','editRating','editRatingValue');hide('editModal',false);}
+function saveMyEdit(btn){run(btn,async()=>{const rating=Number($('editRating').value);if(rating<.5)throw Error('별점을 선택하세요.');const r=await rpc('updateMyActivity',{token,id:editingId,review:val('editReview'),rating,pages:val('editPages'),minutes:val('editMinutes')});viewCache.clear();hide('editModal',true);await loadMy();toast(r.message);});}
+const photoQueue=[];let photoRequests=0;
+const photoObserver=typeof IntersectionObserver!=='undefined'?new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){photoObserver.unobserve(e.target);photoQueue.push(e.target);pumpPhotos();}});},{rootMargin:'100px'}):null;
+function queueSharedPhoto(holder,id){holder.dataset.recordId=id;if(photoObserver)photoObserver.observe(holder);else{const btn=document.createElement('button');btn.className='link';btn.textContent='인증사진 보기';btn.onclick=()=>{photoQueue.push(holder);pumpPhotos();};holder.replaceChildren(btn);}}
+function pumpPhotos(){while(photoRequests<2&&photoQueue.length){const holder=photoQueue.shift();if(!holder.isConnected)continue;photoRequests++;const session=token;rpc('getSharedPhoto',{token:session,id:holder.dataset.recordId}).then(r=>{if(!holder.isConnected||session!==token)return;const img=document.createElement('img');img.className='photo';img.alt='공개 인증사진';img.src=r.dataUrl;img.onerror=()=>{holder.textContent='사진을 불러올 수 없습니다.';};holder.replaceChildren(img);}).catch(()=>{if(holder.isConnected)holder.textContent='사진을 불러올 수 없습니다.';}).finally(()=>{photoRequests--;pumpPhotos();});}}
+function deleteMyRecord(id,btn){if(!confirm('이 기록을 삭제할까요? 기록으로 받은 점수도 차감됩니다.'))return;run(btn,async()=>{const r=await rpc('deleteMyActivity',{token,id});user=r.user;viewCache.clear();await loadMy();toast(r.message);});}
+function openAdmin(btn){run(btn,async()=>{
+  adminData=await rpc('adminDashboard',token);adminVisible=true;hide('mainSection',true);hide('bottomNav',true);hide('adminSection',false);renderAdmin();
+});}
+function closeAdmin(){adminVisible=false;hide('adminSection',true);hide('mainSection',false);hide('bottomNav',false);tab('My');}
+function loadAdmin(btn){run(btn,async()=>{adminData=await rpc('adminDashboard',token);renderAdmin();});}
+function adminAction(fn,data,btn){run(btn,async()=>{const r=await rpc(fn,Object.assign({},data,{token}));toast(r.message);viewCache.clear();adminData=await rpc('adminDashboard',token);renderAdmin();});}
+function renderAdmin(){if(!adminData)return;const q=val('adminQuery').toLowerCase(),match=s=>String(s).toLowerCase().includes(q);$('adminStats').innerHTML='<div class="tablewrap"><table><tr><th>학년</th><th>회원</th><th>기록</th><th>누적점수</th></tr>'+adminData.stats.map(x=>'<tr><td>'+x.grade+'</td><td>'+x.users+'</td><td>'+x.records+'</td><td>'+x.points+'</td></tr>').join('')+'</table>';$('adminUsers').innerHTML='';adminData.users.filter(u=>match(u.studentId+' '+u.name+' '+u.nickname)).forEach(u=>{const box=document.createElement('div');box.className='entry';box.innerHTML='<strong>'+esc(u.studentId)+' '+esc(u.name)+'</strong><p class="small">'+esc(u.nickname)+' · '+u.totalPoints+'점 · '+(u.enabled?'사용 가능':'사용 제한')+'</p>';const actions=document.createElement('div');actions.className='admin-buttons';const reset=document.createElement('button');reset.textContent='PIN 초기화';reset.onclick=()=>{const pin=prompt('학생에게 전달할 새 PIN 숫자 4자리');if(pin!==null)adminAction('adminUpdateUser',{studentId:u.studentId,action:'resetPin',pin},reset);};const toggle=document.createElement('button');toggle.textContent=u.enabled?'사용 제한':'사용 허용';toggle.onclick=()=>adminAction('adminUpdateUser',{studentId:u.studentId,action:'toggle'},toggle);actions.append(reset,toggle);box.append(actions);$('adminUsers').append(box);});$('adminRecords').innerHTML='';adminData.records.filter(r=>match(r.studentId+' '+r.name+' '+r.title)).forEach(r=>{const box=document.createElement('div');box.className='entry';box.innerHTML='<strong>'+esc(r.title)+'</strong><p class="small">'+esc(r.studentId)+' '+esc(r.name)+' · '+esc(r.date)+' · '+r.points+'점 · '+(r.deleted?'삭제 처리':r.shared?'공개':'비공개')+'</p><p class="review">'+esc(r.review)+'</p><details class="small gap"><summary>원본 기록 확인</summary><p class="review">'+esc(r.originalReview)+'</p><p>원본 점수 '+r.originalPoints+'점</p></details>'+(url(r.photoUrl)?'<a class="link" href="'+url(r.photoUrl)+'" target="_blank" rel="noopener">인증사진 확인</a>':'');if(!r.deleted){const actions=document.createElement('div');actions.className='admin-buttons gap';[['hide','공개 해제'],['edit','소감 수정'],['points','점수 수정'],['delete','삭제 처리']].forEach(([action,label])=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>{const data={id:r.id,action};if(action==='delete'&&!confirm('이 기록을 삭제 처리하고 점수를 차감할까요? 원본과 변경 이력은 보존됩니다.'))return;if(action==='edit'){const s=prompt('수정할 소감',r.review);if(s===null)return;data.review=s;}if(action==='points'){const s=prompt('점수 (0.5점 단위)',r.points);if(s===null)return;data.points=s;}adminAction('adminUpdateActivity',data,b);};actions.append(b);});box.append(actions);}$('adminRecords').append(box);});}
+
+// 공통 입력 배려: 로그인, 가입, 기록, 검색, PIN 변경, 관리자, 수정 팝업.
+function initKeyboardComfort(){
+  const root=document.documentElement,vv=window.visualViewport;
+  let baseline=vv?vv.height:window.innerHeight,baselineWidth=window.innerWidth,adjustTimer;
+  const typing=el=>el&&(el.tagName==='TEXTAREA'||el.tagName==='INPUT'&&!['checkbox','radio','range','file','hidden','button','submit'].includes(el.type));
+  function metrics(){
+    const height=vv?vv.height:window.innerHeight,top=vv?vv.offsetTop:0;
+    root.style.setProperty('--visible-height',height+'px');root.style.setProperty('--visible-top',top+'px');
+    const focused=typing(document.activeElement),zoomed=vv&&vv.scale>1.1;
+    if(Math.abs(window.innerWidth-baselineWidth)>80){baselineWidth=window.innerWidth;baseline=window.innerHeight;}
+    if(!focused&&!zoomed)baseline=height;
+    const mobile=window.matchMedia('(pointer: coarse)').matches;
+    const open=mobile&&focused&&!zoomed&&(baseline-height>120||window.innerHeight-height-top>120);
+    root.classList.toggle('keyboard-open',open);
+    const covered=Math.max(0,window.innerHeight-height-top);
+    root.style.setProperty('--keyboard-room',open?(covered+100)+'px':'0px');
+    return {height,top};
+  }
+  function reveal(){
+    const el=document.activeElement;if(!typing(el))return;
+    const {height,top}=metrics(),upper=top+18,lower=top+height-22;
+    const rect=el.getBoundingClientRect();let bottom=rect.bottom;
+    const buttonId=el.id==='loginPin'||el.id==='loginStudentId'?'loginButton':el.id==='regPin'?'registerButton':null;
+    const button=buttonId?document.getElementById(buttonId):null;
+    if(button){const b=button.getBoundingClientRect();if(b.bottom-rect.top<height-44)bottom=b.bottom;}
+    let delta=0;
+    if(rect.height>height-44||rect.top<upper)delta=rect.top-upper;
+    else if(bottom>lower)delta=bottom-lower;
+    if(Math.abs(delta)<2)return;
+    const modal=el.closest('.modal-overlay');
+    if(modal){const body=el.closest('.modal-body'),scroller=body||modal;scroller.scrollTop+=delta;}
+    else window.scrollBy({top:delta,behavior:'auto'});
+  }
+  function resized(){metrics();clearTimeout(adjustTimer);adjustTimer=setTimeout(reveal,60);}
+  document.addEventListener('focusin',event=>{
+    if(!typing(event.target))return;
+    metrics();setTimeout(reveal,100);setTimeout(reveal,350);
+  });
+  document.addEventListener('focusout',()=>setTimeout(metrics,120));
+  window.addEventListener('resize',resized,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(()=>{baseline=window.innerHeight;baselineWidth=window.innerWidth;resized();},250));
+  if(vv){vv.addEventListener('resize',resized,{passive:true});vv.addEventListener('scroll',metrics,{passive:true});}
+  metrics();
+}
+
+async function start(){initKeyboardComfort();ensureBridge().catch(e=>toast(e.message));setupPins();initPicker('ratingPicker','rating','ratingValue');initPicker('editRatingPicker','editRating','editRatingValue');
+$('loginCard').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();if(!$('loginButton').disabled)login($('loginButton'));}});
+$('registerCard').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();if(!$('registerButton').disabled)register($('registerButton'));}});const saved=sessionStorage.getItem('readingToken');if(saved){token=saved;try{const r=await rpc('getMyPage',token);applySession({token,user:r.user});}catch(e){sessionStorage.removeItem('readingToken');token='';}}}
+start();
+</script></body></html>
