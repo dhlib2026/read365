@@ -335,55 +335,37 @@ const $=id=>document.getElementById(id), hide=(id,yes)=>$(id).classList.toggle('
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function url(v){return /^https:\/\//.test(String(v||''))?esc(v):'';}
 function toast(s){$('toastMsg').textContent=s;$('toast').classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>$('toast').classList.remove('show'),4200);}
-// Google HTML 서비스의 연결 화면을 숨김 iframe으로 열고 postMessage로 통신합니다.
-// 새 도메인으로 fetch를 보내지 않으므로 CORS 우회용 공개 프록시가 필요 없습니다.
-let bridgePromise=null,bridgeWindow=null,bridgeOrigin='',bridgeChannel='',bridgeFrame=null,bridgeReady=null;
-const bridgeRequests=new Map();
+// POST로 요청하고 숨김 응답 화면의 postMessage로 결과를 받습니다.
+// 사전 iframe 연결 준비 단계는 사용하지 않습니다.
 function trustedGoogleOrigin(origin){try{const u=new URL(origin);return u.protocol==='https:'&&(u.hostname==='script.google.com'||u.hostname==='script.googleusercontent.com'||u.hostname.endsWith('.googleusercontent.com'));}catch(e){return false;}}
-window.addEventListener('message',event=>{
-  const data=event.data;
-  if(!data||data.channel!==bridgeChannel||!trustedGoogleOrigin(event.origin))return;
-  if(data.type==='reading-ready'){
-    if(bridgeWindow&&event.source!==bridgeWindow)return;
-    bridgeWindow=event.source;bridgeOrigin=event.origin;if(bridgeReady){bridgeReady();bridgeReady=null;}return;
+function ensureBridge(){return Promise.resolve();}
+function rpc(name,arg){
+ return new Promise((resolve,reject)=>{
+  let endpoint;
+  try{endpoint=new URL(GOOGLE_SCRIPT_URL);if(endpoint.protocol!=='https:'||endpoint.hostname!=='script.google.com'||!endpoint.pathname.endsWith('/exec'))throw Error();}
+  catch(e){reject(Error('GOOGLE_SCRIPT_URL에 구글 웹 앱 배포 주소(/exec)를 입력하세요.'));return;}
+  if(location.protocol!=='https:'){reject(Error('GitHub Pages의 HTTPS 주소에서 접속하세요.'));return;}
+  const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);
+  const id=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+  const frame=document.createElement('iframe');frame.name='reading_post_'+id;frame.title='독서 기록장 서버 통신';frame.style.display='none';frame.setAttribute('aria-hidden','true');
+  const form=document.createElement('form');form.method='POST';form.action=endpoint.href;form.target=frame.name;form.enctype='application/x-www-form-urlencoded';form.acceptCharset='UTF-8';form.style.display='none';
+  const field=document.createElement('input');field.type='hidden';field.name='payload';
+  try{field.value=JSON.stringify({origin:location.origin,id,action:name,arg});}catch(e){reject(Error('요청 자료를 변환할 수 없습니다.'));return;}
+  if(field.value.length>6*1024*1024){reject(Error('요청 용량이 너무 큽니다.'));return;}
+  form.append(field);
+  let settled=false,timer;
+  const finish=(error,result)=>{if(settled)return;settled=true;clearTimeout(timer);window.removeEventListener('message',receive);form.remove();frame.remove();if(error)reject(error);else resolve(result);};
+  function receive(event){
+   const data=event.data;
+   if(!trustedGoogleOrigin(event.origin)||!data||data.channel!=='reading-post-v1'||data.id!==id)return;
+   if(data.result&&data.result.success)finish(null,data.result);
+   else finish(Error(data.result&&data.result.message||'요청 처리 실패'));
   }
-  if(event.source!==bridgeWindow||event.origin!==bridgeOrigin||data.type!=='reading-result')return;
-  const pending=bridgeRequests.get(data.id);if(!pending)return;
-  clearTimeout(pending.timer);bridgeRequests.delete(data.id);
-  if(data.result&&data.result.success)pending.resolve(data.result);else pending.reject(Error(data.result&&data.result.message||'요청 처리 실패'));
-});
-
-function showConnectionRecovery(){
-  if(document.getElementById('connectionRecovery'))return;
-  const panel=document.createElement('div');panel.id='connectionRecovery';panel.className='card';
-  const message=document.createElement('p');message.textContent='연결이 제한된 환경입니다. 아래 버튼으로 독서 기록장을 직접 열어 로그인하세요.';
-  const link=document.createElement('a');link.className='btn btn-primary gap';link.textContent='독서 기록장 직접 열기';
-  const endpoint=new URL(GOOGLE_SCRIPT_URL);endpoint.search='';endpoint.hash='';
-  link.href=endpoint.href;link.target='_blank';link.rel='noopener noreferrer';
-  panel.append(message,link);
-  const host=document.getElementById('loginCard');host.parentNode.insertBefore(panel,host);
-}
-
-function ensureBridge(){
-  if(bridgePromise)return bridgePromise;
-  let endpoint;try{endpoint=new URL(GOOGLE_SCRIPT_URL);if(endpoint.protocol!=='https:'||endpoint.hostname!=='script.google.com'||!endpoint.pathname.endsWith('/exec'))throw Error();}catch(e){return Promise.reject(Error('Index 맨 앞 GOOGLE_SCRIPT_URL에 구글 웹 앱 배포 주소(/exec)를 입력하세요.'));}
-  if(location.protocol!=='https:')return Promise.reject(Error('파일을 직접 여는 대신 GitHub Pages의 HTTPS 주소에서 접속하세요.'));
-  bridgeChannel=crypto.randomUUID();endpoint.searchParams.set('bridge','1');endpoint.searchParams.set('channel',bridgeChannel);
-  bridgePromise=new Promise((resolve,reject)=>{
-    const timeout=setTimeout(()=>{bridgeReady=null;showConnectionRecovery();reject(Error('구글 연결이 지연됩니다. 화면의 ‘독서 기록장 직접 열기’를 이용하세요.'));},30000);
-    bridgeReady=()=>{clearTimeout(timeout);document.getElementById('connectionRecovery')?.remove();resolve();};
-    bridgeFrame=document.createElement('iframe');bridgeFrame.title='독서 기록장 서버 연결';bridgeFrame.style.display='none';bridgeFrame.setAttribute('aria-hidden','true');bridgeFrame.src=endpoint.href;document.body.append(bridgeFrame);
-  }).catch(error=>{if(bridgeFrame)bridgeFrame.remove();bridgePromise=null;bridgeWindow=null;bridgeOrigin='';throw error;});
-  return bridgePromise;
-}
-async function rpc(name,arg){
-  await ensureBridge();
-  return new Promise((resolve,reject)=>{
-    const id=crypto.randomUUID(),timer=setTimeout(()=>{bridgeRequests.delete(id);reject(Error('서버 응답이 지연됩니다. 저장 요청은 다시 누르면 중복 저장을 확인합니다.'));},120000);
-    bridgeRequests.set(id,{resolve,reject,timer});
-    try{bridgeWindow.postMessage({channel:bridgeChannel,type:'reading-request',id,action:name,arg},bridgeOrigin);}
-    catch(e){clearTimeout(timer);bridgeRequests.delete(id);reject(Error('구글 서버와 연결이 끊겼습니다. 페이지를 새로 열어주세요.'));}
-  });
+  window.addEventListener('message',receive);
+  timer=setTimeout(()=>finish(Error('서버 응답이 지연됩니다. 저장 요청이었다면 기록을 확인한 뒤 다시 시도하세요.')),120000);
+  try{document.body.append(frame,form);HTMLFormElement.prototype.submit.call(form);}
+  catch(e){finish(Error('구글 서버에 요청을 전송하지 못했습니다.'));}
+ });
 }
 async function run(btn,fn){if(btn)btn.disabled=true;try{await fn();}catch(e){toast(e.message);}finally{if(btn)btn.disabled=false;}}
 function authMode(register){hide('loginCard',register);hide('registerCard',!register);$('authLoginTab').classList.toggle('active',!register);$('authRegisterTab').classList.toggle('active',register);}
