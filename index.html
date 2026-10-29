@@ -352,14 +352,26 @@ window.addEventListener('message',event=>{
   clearTimeout(pending.timer);bridgeRequests.delete(data.id);
   if(data.result&&data.result.success)pending.resolve(data.result);else pending.reject(Error(data.result&&data.result.message||'요청 처리 실패'));
 });
+
+function showConnectionRecovery(){
+  if(document.getElementById('connectionRecovery'))return;
+  const panel=document.createElement('div');panel.id='connectionRecovery';panel.className='card';
+  const message=document.createElement('p');message.textContent='연결이 제한된 환경입니다. 아래 버튼으로 독서 기록장을 직접 열어 로그인하세요.';
+  const link=document.createElement('a');link.className='btn btn-primary gap';link.textContent='독서 기록장 직접 열기';
+  const endpoint=new URL(GOOGLE_SCRIPT_URL);endpoint.search='';endpoint.hash='';
+  link.href=endpoint.href;link.target='_blank';link.rel='noopener noreferrer';
+  panel.append(message,link);
+  const host=document.getElementById('loginCard');host.parentNode.insertBefore(panel,host);
+}
+
 function ensureBridge(){
   if(bridgePromise)return bridgePromise;
   let endpoint;try{endpoint=new URL(GOOGLE_SCRIPT_URL);if(endpoint.protocol!=='https:'||endpoint.hostname!=='script.google.com'||!endpoint.pathname.endsWith('/exec'))throw Error();}catch(e){return Promise.reject(Error('Index 맨 앞 GOOGLE_SCRIPT_URL에 구글 웹 앱 배포 주소(/exec)를 입력하세요.'));}
   if(location.protocol!=='https:')return Promise.reject(Error('파일을 직접 여는 대신 GitHub Pages의 HTTPS 주소에서 접속하세요.'));
   bridgeChannel=crypto.randomUUID();endpoint.searchParams.set('bridge','1');endpoint.searchParams.set('channel',bridgeChannel);
   bridgePromise=new Promise((resolve,reject)=>{
-    const timeout=setTimeout(()=>{bridgeReady=null;reject(Error('구글 서버 연결 실패: 배포 접근 권한, /exec 주소, Code.gs의 GitHub 기본주소를 확인하세요.'));},30000);
-    bridgeReady=()=>{clearTimeout(timeout);resolve();};
+    const timeout=setTimeout(()=>{bridgeReady=null;showConnectionRecovery();reject(Error('구글 연결이 지연됩니다. 화면의 ‘독서 기록장 직접 열기’를 이용하세요.'));},30000);
+    bridgeReady=()=>{clearTimeout(timeout);document.getElementById('connectionRecovery')?.remove();resolve();};
     bridgeFrame=document.createElement('iframe');bridgeFrame.title='독서 기록장 서버 연결';bridgeFrame.style.display='none';bridgeFrame.setAttribute('aria-hidden','true');bridgeFrame.src=endpoint.href;document.body.append(bridgeFrame);
   }).catch(error=>{if(bridgeFrame)bridgeFrame.remove();bridgePromise=null;bridgeWindow=null;bridgeOrigin='';throw error;});
   return bridgePromise;
